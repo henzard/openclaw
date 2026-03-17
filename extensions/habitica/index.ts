@@ -16,8 +16,6 @@ export default definePluginEntry({
       return;
     }
 
-    api.registerTool(
-      createHabiticaTool({ userId, apiKey }) as AnyAgentTool,
-    );
+    api.registerTool(createHabiticaTool({ userId, apiKey }) as AnyAgentTool);
   },
 });

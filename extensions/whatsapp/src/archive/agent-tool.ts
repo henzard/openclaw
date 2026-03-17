@@ -21,18 +21,10 @@ export function createWhatsAppArchiveTool(db: DatabaseSync): ChannelAgentTool {
       date_to: Type.Optional(
         Type.String({ description: "End date (ISO 8601, e.g. 2025-03-17T23:59:59)" }),
       ),
-      sender: Type.Optional(
-        Type.String({ description: "Filter by sender phone number or name" }),
-      ),
-      group: Type.Optional(
-        Type.String({ description: "Filter by group JID or subject" }),
-      ),
-      query: Type.Optional(
-        Type.String({ description: "Text search across message bodies" }),
-      ),
-      limit: Type.Optional(
-        Type.Number({ description: "Max results (default 50, max 200)" }),
-      ),
+      sender: Type.Optional(Type.String({ description: "Filter by sender phone number or name" })),
+      group: Type.Optional(Type.String({ description: "Filter by group JID or subject" })),
+      query: Type.Optional(Type.String({ description: "Text search across message bodies" })),
+      limit: Type.Optional(Type.Number({ description: "Max results (default 50, max 200)" })),
     }),
     execute: async (_toolCallId, args) => {
       const params = args as {

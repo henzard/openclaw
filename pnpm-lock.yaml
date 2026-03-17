@@ -288,6 +288,8 @@ importers:
 
   extensions/byteplus: {}
 
+  extensions/chutes: {}
+
   extensions/cloudflare-ai-gateway: {}
 
   extensions/copilot-proxy: {}
@@ -373,6 +375,8 @@ importers:
       openclaw:
         specifier: '>=2026.3.11'
         version: 2026.3.13(@discordjs/opus@0.10.0)(@napi-rs/canvas@0.1.95)(@types/express@5.0.6)(audio-decode@2.2.3)(node-llama-cpp@3.16.2(typescript@5.9.3))
+
+  extensions/habitica: {}
 
   extensions/huggingface: {}
 

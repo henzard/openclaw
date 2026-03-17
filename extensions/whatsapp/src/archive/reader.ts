@@ -28,7 +28,7 @@ export interface ArchivedMessage {
 
 export function searchMessages(db: DatabaseSync, filters: ArchiveSearchFilters): ArchivedMessage[] {
   const conditions: string[] = [];
-  const params: unknown[] = [];
+  const params: (string | number)[] = [];
 
   if (filters.dateFrom) {
     conditions.push("timestamp >= ?");
@@ -65,7 +65,7 @@ export function searchMessages(db: DatabaseSync, filters: ArchiveSearchFilters):
        FROM whatsapp_messages ${where}
        ORDER BY timestamp DESC LIMIT ?`,
     )
-    .all(...params, limit) as ArchivedMessage[];
+    .all(...params, limit) as unknown as ArchivedMessage[];
 }
 
 export interface MessageSummary {
@@ -82,7 +82,7 @@ export function getMessageSummary(
   dateTo?: string,
 ): MessageSummary {
   const conditions: string[] = [];
-  const params: unknown[] = [];
+  const params: (string | number)[] = [];
 
   if (dateFrom) {
     conditions.push("timestamp >= ?");
@@ -97,19 +97,19 @@ export function getMessageSummary(
 
   const totalRow = db
     .prepare(`SELECT COUNT(*) as count FROM whatsapp_messages ${where}`)
-    .get(...params) as { count: number };
+    .get(...params) as unknown as { count: number };
 
   const inboundRow = db
     .prepare(
       `SELECT COUNT(*) as count FROM whatsapp_messages ${where ? where + " AND" : "WHERE"} direction = 'inbound'`,
     )
-    .get(...params) as { count: number };
+    .get(...params) as unknown as { count: number };
 
   const outboundRow = db
     .prepare(
       `SELECT COUNT(*) as count FROM whatsapp_messages ${where ? where + " AND" : "WHERE"} direction = 'outbound'`,
     )
-    .get(...params) as { count: number };
+    .get(...params) as unknown as { count: number };
 
   const bySender = db
     .prepare(
@@ -117,7 +117,7 @@ export function getMessageSummary(
        ${where ? where + " AND" : "WHERE"} sender IS NOT NULL
        GROUP BY sender ORDER BY count DESC LIMIT 20`,
     )
-    .all(...params) as Array<{ sender: string; count: number }>;
+    .all(...params) as unknown as Array<{ sender: string; count: number }>;
 
   const byGroup = db
     .prepare(
@@ -125,7 +125,11 @@ export function getMessageSummary(
        ${where ? where + " AND" : "WHERE"} is_group = 1
        GROUP BY group_id ORDER BY count DESC LIMIT 20`,
     )
-    .all(...params) as Array<{ group_id: string; group_subject: string | null; count: number }>;
+    .all(...params) as unknown as Array<{
+    group_id: string;
+    group_subject: string | null;
+    count: number;
+  }>;
 
   return {
     totalMessages: totalRow.count,
@@ -143,5 +147,5 @@ export function getRecentMessages(db: DatabaseSync, limit = 20): ArchivedMessage
               is_group, group_id, group_subject, timestamp, account_id
        FROM whatsapp_messages ORDER BY timestamp DESC LIMIT ?`,
     )
-    .all(Math.min(limit, 200)) as ArchivedMessage[];
+    .all(Math.min(limit, 200)) as unknown as ArchivedMessage[];
 }

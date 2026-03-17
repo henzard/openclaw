@@ -35,5 +35,8 @@ export type WebMonitorTuning = {
   /** Debounce window (ms) for batching rapid consecutive messages from the same sender. */
   debounceMs?: number;
   /** Callback invoked for every raw message BEFORE access control. Used for archiving. */
-  onRawMessage?: (raw: import("@whiskeysockets/baileys").proto.IWebMessageInfo, accountId: string) => void;
+  onRawMessage?: (
+    raw: import("@whiskeysockets/baileys").proto.IWebMessageInfo,
+    accountId: string,
+  ) => void;
 };

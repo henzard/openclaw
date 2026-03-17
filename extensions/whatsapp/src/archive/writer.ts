@@ -12,11 +12,7 @@ export function archiveInboundMessage(
   const messageId = key.id ?? null;
   const remoteJid = key.remoteJid ?? null;
   const isGroup = remoteJid?.endsWith("@g.us") ? 1 : 0;
-  const sender = isGroup
-    ? (key.participant ?? null)
-    : key.fromMe
-      ? "me"
-      : (remoteJid ?? null);
+  const sender = isGroup ? (key.participant ?? null) : key.fromMe ? "me" : (remoteJid ?? null);
   const recipient = key.fromMe ? (remoteJid ?? null) : "me";
 
   const msg = raw.message;

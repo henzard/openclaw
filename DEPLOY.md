@@ -8,13 +8,13 @@ from the official installer.
 
 ## Prerequisites
 
-| Requirement | Check command | Notes |
-|---|---|---|
-| Node 22+ (24 recommended) | `node -v` | The installer likely already set this up |
-| pnpm | `pnpm -v` | `npm i -g pnpm` if missing |
-| git | `git --version` | Should already be present |
-| ffmpeg | `ffmpeg -version` | Required for Whisper audio decoding |
-| faster-whisper | `faster-whisper --help` | Local audio transcription |
+| Requirement               | Check command           | Notes                                    |
+| ------------------------- | ----------------------- | ---------------------------------------- |
+| Node 22+ (24 recommended) | `node -v`               | The installer likely already set this up |
+| pnpm                      | `pnpm -v`               | `npm i -g pnpm` if missing               |
+| git                       | `git --version`         | Should already be present                |
+| ffmpeg                    | `ffmpeg -version`       | Required for Whisper audio decoding      |
+| faster-whisper            | `faster-whisper --help` | Local audio transcription                |
 
 ---
 
@@ -154,12 +154,12 @@ Add/update the WhatsApp archive config under your WhatsApp account:
           "archive": {
             "enabled": true,
             "retentionDays": 90,
-            "persistAudio": true
-          }
-        }
-      }
-    }
-  }
+            "persistAudio": true,
+          },
+        },
+      },
+    },
+  },
 }
 ```
 
@@ -351,16 +351,16 @@ data in `~/.openclaw/` are preserved.
 
 ## Quick Reference
 
-| Task | Command |
-|---|---|
-| Check status | `openclaw gateway status` |
-| View logs | `openclaw logs --follow` |
-| Restart | `openclaw gateway restart` |
-| Stop | `openclaw gateway stop` |
-| Health check | `openclaw health` |
-| Run diagnostics | `openclaw doctor` |
-| Check archive DB | `sqlite3 ~/.openclaw/whatsapp/archive.sqlite "SELECT COUNT(*) FROM whatsapp_messages;"` |
-| Prune archive manually | Happens automatically every 24h based on `retentionDays` |
+| Task                   | Command                                                                                 |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| Check status           | `openclaw gateway status`                                                               |
+| View logs              | `openclaw logs --follow`                                                                |
+| Restart                | `openclaw gateway restart`                                                              |
+| Stop                   | `openclaw gateway stop`                                                                 |
+| Health check           | `openclaw health`                                                                       |
+| Run diagnostics        | `openclaw doctor`                                                                       |
+| Check archive DB       | `sqlite3 ~/.openclaw/whatsapp/archive.sqlite "SELECT COUNT(*) FROM whatsapp_messages;"` |
+| Prune archive manually | Happens automatically every 24h based on `retentionDays`                                |
 
 ---
 
@@ -378,8 +378,8 @@ The cron system already supports WhatsApp delivery. Add jobs to your config:
         "prompt": "Check my Habitica dashboard and remind me of overdue dailies and incomplete todos",
         "delivery": {
           "channel": "whatsapp",
-          "to": "default"
-        }
+          "to": "default",
+        },
       },
       {
         "id": "whatsapp-digest",
@@ -387,11 +387,11 @@ The cron system already supports WhatsApp delivery. Add jobs to your config:
         "prompt": "Give me a summary of what happened on WhatsApp today",
         "delivery": {
           "channel": "whatsapp",
-          "to": "default"
-        }
-      }
-    ]
-  }
+          "to": "default",
+        },
+      },
+    ],
+  },
 }
 ```
 
