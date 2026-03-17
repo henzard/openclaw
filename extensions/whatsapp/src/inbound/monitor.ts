@@ -34,6 +34,8 @@ export async function monitorWebInbox(options: {
   debounceMs?: number;
   /** Optional debounce gating predicate. */
   shouldDebounce?: (msg: WebInboundMessage) => boolean;
+  /** Optional callback invoked for every raw message BEFORE access control filtering. Used for archiving. */
+  onRawMessage?: (raw: proto.IWebMessageInfo, accountId: string) => void;
 }) {
   const inboundLogger = getChildLogger({ module: "web-inbound" });
   const inboundConsoleLog = createSubsystemLogger("gateway/channels/whatsapp").child("inbound");
@@ -399,6 +401,14 @@ export async function monitorWebInbox(options: {
       return;
     }
     for (const msg of upsert.messages ?? []) {
+      if (options.onRawMessage) {
+        try {
+          options.onRawMessage(msg as proto.IWebMessageInfo, options.accountId);
+        } catch (err) {
+          logVerbose(`onRawMessage callback error: ${String(err)}`);
+        }
+      }
+
       recordChannelActivity({
         channel: "whatsapp",
         accountId: options.accountId,

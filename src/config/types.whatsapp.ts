@@ -110,6 +110,17 @@ export type WhatsAppConfig = WhatsAppConfigCore &
     actions?: WhatsAppActionConfig;
   };
 
+export type WhatsAppArchiveConfig = {
+  /** Enable message archiving to SQLite. Default: false. */
+  enabled?: boolean;
+  /** Custom path for the archive SQLite database. Default: ~/.openclaw/whatsapp/archive.sqlite */
+  path?: string;
+  /** Days to retain archived messages (0 to disable pruning). Default: 90. */
+  retentionDays?: number;
+  /** Persist audio files to permanent storage. Default: true. */
+  persistAudio?: boolean;
+};
+
 export type WhatsAppAccountConfig = WhatsAppConfigCore &
   WhatsAppSharedConfig & {
     /** Optional display name for this account (used in CLI/UI lists). */
@@ -118,4 +129,6 @@ export type WhatsAppAccountConfig = WhatsAppConfigCore &
     enabled?: boolean;
     /** Override auth directory (Baileys multi-file auth state). */
     authDir?: string;
+    /** Message archive configuration. */
+    archive?: WhatsAppArchiveConfig;
   };

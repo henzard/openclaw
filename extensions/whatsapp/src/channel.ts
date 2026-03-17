@@ -1,3 +1,5 @@
+import path from "node:path";
+import type { DatabaseSync } from "node:sqlite";
 import { buildAccountScopedAllowlistConfigEditor } from "openclaw/plugin-sdk/allowlist-config-edit";
 import {
   buildChannelConfigSchema,
@@ -21,6 +23,14 @@ import {
 import { isWhatsAppGroupJid, normalizeWhatsAppTarget } from "openclaw/plugin-sdk/whatsapp";
 // WhatsApp-specific imports from local extension code (moved from src/web/ and src/channels/plugins/)
 import { resolveWhatsAppAccount, type ResolvedWhatsAppAccount } from "./accounts.js";
+import {
+  openArchiveDb,
+  pruneOldMessages,
+  archiveInboundMessage,
+  archiveOutboundMessage,
+  createWhatsAppArchiveTool,
+} from "./archive/index.js";
+import { persistAudioFile } from "./archive/media-persist.js";
 import { looksLikeWhatsAppTargetId, normalizeWhatsAppMessagingTarget } from "./normalize.js";
 import { getWhatsAppRuntime } from "./runtime.js";
 import { whatsappSetupAdapter } from "./setup-core.js";
@@ -47,6 +57,8 @@ function parseWhatsAppExplicitTarget(raw: string) {
   };
 }
 
+let archiveDb: DatabaseSync | null = null;
+
 export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
   ...createWhatsAppPluginBase({
     configSchema: buildChannelConfigSchema(WhatsAppConfigSchema),
@@ -60,7 +72,13 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
     isConfigured: async (account) =>
       await getWhatsAppRuntime().channel.whatsapp.webAuthExists(account.authDir),
   }),
-  agentTools: () => [getWhatsAppRuntime().channel.whatsapp.createLoginTool()],
+  agentTools: () => {
+    const tools = [getWhatsAppRuntime().channel.whatsapp.createLoginTool()];
+    if (archiveDb) {
+      tools.push(createWhatsAppArchiveTool(archiveDb));
+    }
+    return tools;
+  },
   pairing: {
     idLabel: "whatsappSenderId",
   },
@@ -281,6 +299,105 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
       const { e164, jid } = (await loadWhatsAppChannelRuntime()).readWebSelfId(account.authDir);
       const identity = e164 ? e164 : jid ? `jid ${jid}` : "unknown";
       ctx.log?.info(`[${account.accountId}] starting provider (${identity})`);
+
+      type ArchiveCfg = { enabled?: boolean; path?: string; retentionDays?: number; persistAudio?: boolean };
+      const whatsappAccounts = ctx.cfg?.channels?.whatsapp?.accounts as
+        | Record<string, { archive?: ArchiveCfg }> | undefined;
+      const archiveCfg: ArchiveCfg | undefined = whatsappAccounts?.[account.accountId]?.archive;
+
+      let onRawMessage: ((raw: import("@whiskeysockets/baileys").proto.IWebMessageInfo, acctId: string) => void) | undefined;
+
+      if (archiveCfg?.enabled) {
+        const { resolveStateDir } = await import("openclaw/plugin-sdk/state-paths");
+        const defaultDbPath = path.join(resolveStateDir(), "whatsapp", "archive.sqlite");
+        const dbPath = archiveCfg.path ?? defaultDbPath;
+        archiveDb = openArchiveDb(dbPath);
+        ctx.log?.info(`[${account.accountId}] WhatsApp archive enabled at ${dbPath}`);
+
+        const retentionDays = archiveCfg.retentionDays ?? 90;
+        if (retentionDays > 0) {
+          const audioDir = path.join(path.dirname(dbPath), "audio");
+          const pruned = pruneOldMessages(archiveDb, retentionDays, audioDir);
+          if (pruned > 0) {
+            ctx.log?.info(`[${account.accountId}] Pruned ${pruned} archived messages older than ${retentionDays} days`);
+          }
+        }
+
+        const db = archiveDb;
+        const shouldPersistAudio = archiveCfg.persistAudio !== false;
+        const audioDir = shouldPersistAudio ? path.join(path.dirname(dbPath), "audio") : undefined;
+
+        onRawMessage = (raw, acctId) => {
+          try {
+            archiveInboundMessage(db, raw, acctId);
+          } catch (err) {
+            ctx.log?.warn?.(`Archive inbound error: ${String(err)}`);
+          }
+        };
+
+        if (shouldPersistAudio) {
+          const { registerInternalHook: registerTranscribeHook } = await import("openclaw/plugin-sdk/hook-runtime");
+          registerTranscribeHook("message:transcribed", (event) => {
+            const tCtx = event.context as { channelId?: string; mediaPath?: string; messageId?: string; mediaType?: string };
+            if (tCtx.channelId !== "whatsapp" || !tCtx.mediaPath || !tCtx.mediaType?.startsWith("audio/")) return;
+            try {
+              const msgId = tCtx.messageId ?? `audio_${Date.now()}`;
+              const destPath = persistAudioFile(tCtx.mediaPath, audioDir!, msgId);
+              if (destPath && tCtx.messageId) {
+                db.prepare("UPDATE whatsapp_messages SET media_path = ? WHERE message_id = ?").run(destPath, tCtx.messageId);
+              }
+            } catch {
+              // best-effort audio persistence
+            }
+          });
+        }
+
+        const { registerInternalHook } = await import("openclaw/plugin-sdk/hook-runtime");
+        registerInternalHook("message:sent", (event) => {
+          const hookCtx = event.context as {
+            channelId?: string;
+            to?: string;
+            content?: string;
+            accountId?: string;
+            messageId?: string;
+            isGroup?: boolean;
+            groupId?: string;
+            success?: boolean;
+          };
+          if (hookCtx.channelId !== "whatsapp" || !hookCtx.success) return;
+          try {
+            archiveOutboundMessage(db, {
+              to: hookCtx.to ?? "",
+              content: hookCtx.content ?? "",
+              channelId: "whatsapp",
+              accountId: hookCtx.accountId,
+              messageId: hookCtx.messageId,
+              isGroup: hookCtx.isGroup,
+              groupId: hookCtx.groupId,
+            });
+          } catch (err) {
+            ctx.log?.warn?.(`Archive outbound error: ${String(err)}`);
+          }
+        });
+
+        // Schedule periodic pruning (every 24h)
+        const retDays = archiveCfg.retentionDays ?? 90;
+        if (retDays > 0) {
+          const pruneInterval = setInterval(() => {
+            try {
+              const audioPruneDir = path.join(path.dirname(dbPath), "audio");
+              pruneOldMessages(db, retDays, audioPruneDir);
+            } catch {
+              // best-effort
+            }
+          }, 24 * 60 * 60 * 1000);
+          pruneInterval.unref();
+          ctx.abortSignal?.addEventListener("abort", () => clearInterval(pruneInterval), { once: true });
+        }
+      } else {
+        ctx.log?.info(`[${account.accountId}] WhatsApp archive is disabled. Set channels.whatsapp.accounts.${account.accountId}.archive.enabled = true to archive messages.`);
+      }
+
       return (await loadWhatsAppChannelRuntime()).monitorWebChannel(
         getWhatsAppRuntime().logging.shouldLogVerbose(),
         undefined,
@@ -291,6 +408,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
         {
           statusSink: (next) => ctx.setStatus({ accountId: ctx.accountId, ...next }),
           accountId: account.accountId,
+          onRawMessage,
         },
       );
     },

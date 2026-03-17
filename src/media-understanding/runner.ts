@@ -246,16 +246,37 @@ async function resolveLocalWhisperCppEntry(): Promise<MediaUnderstandingModelCon
   };
 }
 
+async function resolveFasterWhisperEntry(): Promise<MediaUnderstandingModelConfig | null> {
+  if (!(await hasBinary("faster-whisper"))) {
+    return null;
+  }
+  const model = process.env.WHISPER_MODEL?.trim() || "large-v3";
+  return {
+    type: "cli",
+    command: "faster-whisper",
+    args: [
+      "--model",
+      model,
+      "--output_format",
+      "txt",
+      "--output_dir",
+      "{{OutputDir}}",
+      "{{MediaPath}}",
+    ],
+  };
+}
+
 async function resolveLocalWhisperEntry(): Promise<MediaUnderstandingModelConfig | null> {
   if (!(await hasBinary("whisper"))) {
     return null;
   }
+  const model = process.env.WHISPER_MODEL?.trim() || "turbo";
   return {
     type: "cli",
     command: "whisper",
     args: [
       "--model",
-      "turbo",
+      model,
       "--output_format",
       "txt",
       "--output_dir",
@@ -308,6 +329,10 @@ async function resolveLocalAudioEntry(): Promise<MediaUnderstandingModelConfig |
   const sherpa = await resolveSherpaOnnxEntry();
   if (sherpa) {
     return sherpa;
+  }
+  const fasterWhisper = await resolveFasterWhisperEntry();
+  if (fasterWhisper) {
+    return fasterWhisper;
   }
   const whisperCpp = await resolveLocalWhisperCppEntry();
   if (whisperCpp) {

@@ -1,0 +1,12 @@
+{
+  "name": "@openclaw/habitica-plugin",
+  "version": "2026.3.14",
+  "private": true,
+  "description": "OpenClaw Habitica dashboard agent tool",
+  "type": "module",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

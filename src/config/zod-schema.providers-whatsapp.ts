@@ -108,12 +108,23 @@ function enforceAllowlistDmPolicyAllowFrom(params: {
   });
 }
 
+const WhatsAppArchiveSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    path: z.string().optional(),
+    retentionDays: z.number().int().nonnegative().optional().default(90),
+    persistAudio: z.boolean().optional().default(true),
+  })
+  .strict()
+  .optional();
+
 export const WhatsAppAccountSchema = WhatsAppSharedSchema.extend({
   name: z.string().optional(),
   enabled: z.boolean().optional(),
   /** Override auth directory for this WhatsApp account (Baileys multi-file auth state). */
   authDir: z.string().optional(),
   mediaMaxMb: z.number().int().positive().optional(),
+  archive: WhatsAppArchiveSchema,
 }).strict();
 
 export const WhatsAppConfigSchema = WhatsAppSharedSchema.extend({

@@ -179,7 +179,7 @@ async function resolveCliOutput(params: {
   const fileOutput =
     commandId === "whisper-cli"
       ? resolveWhisperCppOutputPath(params.args)
-      : commandId === "whisper"
+      : commandId === "whisper" || commandId === "faster-whisper"
         ? resolveWhisperOutputPath(params.args, params.mediaPath)
         : commandId === "parakeet-mlx"
           ? resolveParakeetOutputPath(params.args, params.mediaPath)
