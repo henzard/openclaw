@@ -131,6 +131,7 @@ export const WhatsAppConfigSchema = WhatsAppSharedSchema.extend({
   accounts: z.record(z.string(), WhatsAppAccountSchema.optional()).optional(),
   defaultAccount: z.string().optional(),
   mediaMaxMb: z.number().int().positive().optional().default(50),
+  archive: WhatsAppArchiveSchema,
   actions: z
     .object({
       reactions: z.boolean().optional(),

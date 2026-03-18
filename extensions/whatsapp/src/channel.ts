@@ -306,10 +306,11 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
         retentionDays?: number;
         persistAudio?: boolean;
       };
-      const whatsappAccounts = ctx.cfg?.channels?.whatsapp?.accounts as
-        | Record<string, { archive?: ArchiveCfg }>
+      const whatsappCfg = ctx.cfg?.channels?.whatsapp as
+        | { accounts?: Record<string, { archive?: ArchiveCfg }>; archive?: ArchiveCfg }
         | undefined;
-      const archiveCfg: ArchiveCfg | undefined = whatsappAccounts?.[account.accountId]?.archive;
+      const archiveCfg: ArchiveCfg | undefined =
+        whatsappCfg?.accounts?.[account.accountId]?.archive ?? whatsappCfg?.archive;
 
       let onRawMessage:
         | ((raw: import("@whiskeysockets/baileys").proto.IWebMessageInfo, acctId: string) => void)
